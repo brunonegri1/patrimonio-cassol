@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
@@ -13,7 +13,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force && npx tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "echo \"postinstall: prisma generate will run in build\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -58,5 +58,8 @@
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
