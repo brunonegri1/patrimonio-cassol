@@ -1,29 +1,11 @@
--- ================================================
--- PATRIMÔNIO CASSOL — Schema Completo
--- ================================================
+-- Enums
+CREATE TYPE "TipoTrabalho" AS ENUM ('CLT', 'PJ', 'PostoTrabalho', 'Terceiro');
+CREATE TYPE "SituacaoTrabalho" AS ENUM ('Trabalhando', 'Afastado', 'Desligado');
+CREATE TYPE "StatusEquipamento" AS ENUM ('Ativo', 'Estoque', 'Desativado', 'Baixado', 'EmManutencao', 'FurtadoRoubado');
+CREATE TYPE "PerfilAcesso" AS ENUM ('Administrador', 'GestorTI', 'Tecnico', 'Consultor');
+CREATE TYPE "AcaoAudit" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'SYNC');
 
--- ENUMS
-DO $$ BEGIN
-  CREATE TYPE "TipoTrabalho" AS ENUM ('CLT', 'PJ', 'PostoTrabalho', 'Terceiro');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE "SituacaoTrabalho" AS ENUM ('Trabalhando', 'Afastado', 'Desligado');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE "StatusEquipamento" AS ENUM ('Ativo', 'Estoque', 'Desativado', 'Baixado', 'EmManutencao', 'FurtadoRoubado');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE "PerfilAcesso" AS ENUM ('Administrador', 'GestorTI', 'Tecnico', 'Consultor');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE "AcaoAudit" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'SYNC');
-EXCEPTION WHEN duplicate_object THEN null; END $$;
-
--- TABELAS
+-- Tabelas
 CREATE TABLE IF NOT EXISTS "empresas" (
   "id" SERIAL PRIMARY KEY,
   "nome" TEXT NOT NULL,
@@ -36,6 +18,32 @@ CREATE TABLE IF NOT EXISTS "unidades" (
   "nome" TEXT NOT NULL,
   "uf" TEXT NOT NULL,
   "empresaId" INTEGER NOT NULL REFERENCES "empresas"("id")
+);
+
+CREATE TABLE IF NOT EXISTS "tipos_equipamento" (
+  "id" SERIAL PRIMARY KEY,
+  "nome" TEXT NOT NULL UNIQUE,
+  "icone" TEXT
+);
+
+CREATE TABLE IF NOT EXISTS "marcas" (
+  "id" SERIAL PRIMARY KEY,
+  "nome" TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS "tipos_posse" (
+  "id" SERIAL PRIMARY KEY,
+  "categoria" TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS "contratos" (
+  "id" SERIAL PRIMARY KEY,
+  "numero" TEXT NOT NULL UNIQUE,
+  "fornecedor" TEXT,
+  "dataContrato" TIMESTAMP NOT NULL,
+  "dataFinal" TIMESTAMP NOT NULL,
+  "valor" DECIMAL(12,2),
+  "observacoes" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "colaboradores" (
@@ -52,32 +60,6 @@ CREATE TABLE IF NOT EXISTS "colaboradores" (
   "userRede" TEXT,
   "email" TEXT,
   "ativo" BOOLEAN NOT NULL DEFAULT true
-);
-
-CREATE TABLE IF NOT EXISTS "tipos_equipamento" (
-  "id" SERIAL PRIMARY KEY,
-  "nome" TEXT UNIQUE NOT NULL,
-  "icone" TEXT
-);
-
-CREATE TABLE IF NOT EXISTS "marcas" (
-  "id" SERIAL PRIMARY KEY,
-  "nome" TEXT UNIQUE NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS "tipos_posse" (
-  "id" SERIAL PRIMARY KEY,
-  "categoria" TEXT UNIQUE NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS "contratos" (
-  "id" SERIAL PRIMARY KEY,
-  "numero" TEXT UNIQUE NOT NULL,
-  "fornecedor" TEXT,
-  "dataContrato" TIMESTAMP NOT NULL,
-  "dataFinal" TIMESTAMP NOT NULL,
-  "valor" DECIMAL(12,2),
-  "observacoes" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "equipamentos" (
@@ -113,7 +95,7 @@ CREATE TABLE IF NOT EXISTS "equipamento_usuarios" (
 
 CREATE TABLE IF NOT EXISTS "tipos_licenca" (
   "id" SERIAL PRIMARY KEY,
-  "nome" TEXT UNIQUE NOT NULL,
+  "nome" TEXT NOT NULL UNIQUE,
   "tipo" TEXT NOT NULL,
   "descricao" TEXT,
   "custo" DECIMAL(10,2)
@@ -130,7 +112,7 @@ CREATE TABLE IF NOT EXISTS "licenca_usuarios" (
 
 CREATE TABLE IF NOT EXISTS "categorias_perfil" (
   "id" SERIAL PRIMARY KEY,
-  "nome" TEXT UNIQUE NOT NULL,
+  "nome" TEXT NOT NULL UNIQUE,
   "processamento" TEXT NOT NULL,
   "ram" TEXT NOT NULL,
   "memoriaDisco" TEXT NOT NULL,
@@ -180,7 +162,7 @@ CREATE TABLE IF NOT EXISTS "audit_logs" (
 
 CREATE TABLE IF NOT EXISTS "usuarios_sistema" (
   "id" SERIAL PRIMARY KEY,
-  "email" TEXT UNIQUE NOT NULL,
+  "email" TEXT NOT NULL UNIQUE,
   "nome" TEXT NOT NULL,
   "senha" TEXT NOT NULL,
   "perfil" "PerfilAcesso" NOT NULL,
@@ -190,20 +172,31 @@ CREATE TABLE IF NOT EXISTS "usuarios_sistema" (
   "criadoEm" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- ÍNDICES
-CREATE INDEX IF NOT EXISTS idx_audit_tabela ON "audit_logs"("tabela", "registroId");
-CREATE INDEX IF NOT EXISTS idx_audit_usuario ON "audit_logs"("usuarioId");
-CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON "audit_logs"("timestamp");
+-- Índices
+CREATE INDEX IF NOT EXISTS "audit_logs_tabela_registroId_idx" ON "audit_logs"("tabela", "registroId");
+CREATE INDEX IF NOT EXISTS "audit_logs_usuarioId_idx" ON "audit_logs"("usuarioId");
+CREATE INDEX IF NOT EXISTS "audit_logs_timestamp_idx" ON "audit_logs"("timestamp");
 
--- RLS: Bloquear UPDATE e DELETE em audit_logs
+-- RLS: AuditLog imutável
 ALTER TABLE "audit_logs" ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "audit_no_update" ON "audit_logs" FOR UPDATE USING (false);
-CREATE POLICY "audit_no_delete" ON "audit_logs" FOR DELETE USING (false);
+CREATE POLICY IF NOT EXISTS "audit_no_update" ON "audit_logs" FOR UPDATE USING (false);
+CREATE POLICY IF NOT EXISTS "audit_no_delete" ON "audit_logs" FOR DELETE USING (false);
 
-SELECT 'Schema criado com sucesso!' AS resultado;
--- ================================================
--- SEED — Dados iniciais Patrimônio Cassol
--- ================================================
+-- Tabela de controle do Prisma (necessária para o ORM)
+CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
+  "id" VARCHAR(36) NOT NULL PRIMARY KEY,
+  "checksum" VARCHAR(64) NOT NULL,
+  "finished_at" TIMESTAMPTZ,
+  "migration_name" VARCHAR(255) NOT NULL,
+  "logs" TEXT,
+  "rolled_back_at" TIMESTAMPTZ,
+  "started_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "applied_steps_count" INTEGER NOT NULL DEFAULT 0
+);
+
+-- =============================================
+-- SEED — Patrimônio Cassol
+-- =============================================
 
 -- Tipos de Equipamento
 INSERT INTO "tipos_equipamento" ("nome", "icone") VALUES
@@ -269,24 +262,24 @@ INSERT INTO "colaboradores" ("id", "matricula", "nome", "cargo", "setor", "unida
 ON CONFLICT ("id") DO NOTHING;
 
 -- Equipamentos
-INSERT INTO "equipamentos" ("nserial", "tipoEquipId", "posseId", "marcaId", "unidadeId", "contratoId", "status", "modelo", "processador", "ram", "memoriaDisco", "patrimonio") VALUES
-  ('NB-DELL-001', 1, 2, 1, 1, 1, 'Ativo', 'Latitude 5540', 'Intel Core i7-1365U', '16GB', '512GB SSD', 'PAT-001'),
-  ('NB-DELL-002', 1, 2, 1, 1, 1, 'Ativo', 'Latitude 5540', 'Intel Core i7-1365U', '16GB', '512GB SSD', 'PAT-002'),
-  ('NB-LEN-003', 1, 1, 2, 2, NULL, 'Ativo', 'ThinkPad E14', 'AMD Ryzen 5 5600U', '8GB', '256GB SSD', 'PAT-003'),
-  ('DT-HP-001', 2, 1, 3, 3, NULL, 'Ativo', 'EliteDesk 800 G9', 'Intel Core i5-13500', '16GB', '512GB SSD', 'PAT-004'),
-  ('MN-DELL-001', 4, 1, 1, 1, NULL, 'Ativo', 'P2422H', NULL, NULL, NULL, 'PAT-005'),
-  ('NB-DELL-003', 1, 2, 1, 1, 1, 'Estoque', 'Latitude 5540', 'Intel Core i7-1365U', '16GB', '512GB SSD', 'PAT-006'),
-  ('CLT-DAT-001', 7, 1, 6, 4, NULL, 'Ativo', 'Memor 20', NULL, NULL, NULL, 'PAT-007'),
-  ('NB-APL-001', 1, 3, 4, 1, NULL, 'Ativo', 'MacBook Pro M3', 'Apple M3 Pro', '18GB', '512GB SSD', NULL)
+INSERT INTO "equipamentos" ("nserial", "status", "patrimonio", "tipoEquipId", "posseId", "marcaId", "unidadeId", "contratoId", "modelo", "processador", "ram", "memoriaDisco", "dataAtualizacao") VALUES
+  ('NB-DELL-001', 'Ativo', 'PAT-001', 1, 2, 1, 1, 1, 'Latitude 5540', 'Intel Core i7-1365U', '16GB', '512GB SSD', NOW()),
+  ('NB-DELL-002', 'Ativo', 'PAT-002', 1, 2, 1, 1, 1, 'Latitude 5540', 'Intel Core i7-1365U', '16GB', '512GB SSD', NOW()),
+  ('NB-LEN-003', 'Ativo', 'PAT-003', 1, 1, 2, 2, NULL, 'ThinkPad E14', 'AMD Ryzen 5 5600U', '8GB', '256GB SSD', NOW()),
+  ('DT-HP-001', 'Ativo', 'PAT-004', 2, 1, 3, 3, NULL, 'EliteDesk 800 G9', 'Intel Core i5-13500', '16GB', '512GB SSD', NOW()),
+  ('MN-DELL-001', 'Ativo', 'PAT-005', 4, 1, 1, 1, NULL, 'P2422H', NULL, NULL, NULL, NOW()),
+  ('NB-DELL-003', 'Estoque', 'PAT-006', 1, 2, 1, 1, 1, 'Latitude 5540', 'Intel Core i7-1365U', '16GB', '512GB SSD', NOW()),
+  ('CLT-DAT-001', 'Ativo', 'PAT-007', 7, 1, 6, 4, NULL, 'Memor 20', NULL, NULL, NULL, NOW()),
+  ('NB-APL-001', 'Ativo', NULL, 1, 3, 4, 1, NULL, 'MacBook Pro M3', 'Apple M3 Pro', '18GB', '512GB SSD', NOW())
 ON CONFLICT ("nserial") DO NOTHING;
 
 -- Vínculos equipamento-usuário
-INSERT INTO "equipamento_usuarios" ("nserial", "colaboradorId", "unidadeId", "cargo", "setor") VALUES
-  ('NB-DELL-001', '111.111.111-11', 1, 'Analista de TI', 'Tecnologia da Informação'),
-  ('NB-DELL-002', '222.222.222-22', 1, 'Gerente de TI', 'Tecnologia da Informação'),
-  ('NB-LEN-003', '333.333.333-33', 2, 'Analista Financeiro', 'Financeiro'),
-  ('DT-HP-001', '444.444.444-44', 3, 'Técnico de Suporte', 'Tecnologia da Informação'),
-  ('MN-DELL-001', '222.222.222-22', 1, 'Gerente de TI', 'Tecnologia da Informação')
+INSERT INTO "equipamento_usuarios" ("nserial", "colaboradorId", "unidadeId", "cargo", "setor", "principal") VALUES
+  ('NB-DELL-001', '111.111.111-11', 1, 'Analista de TI', 'Tecnologia da Informação', true),
+  ('NB-DELL-002', '222.222.222-22', 1, 'Gerente de TI', 'Tecnologia da Informação', true),
+  ('NB-LEN-003', '333.333.333-33', 2, 'Analista Financeiro', 'Financeiro', true),
+  ('DT-HP-001', '444.444.444-44', 3, 'Técnico de Suporte', 'Tecnologia da Informação', true),
+  ('MN-DELL-001', '222.222.222-22', 1, 'Gerente de TI', 'Tecnologia da Informação', false)
 ON CONFLICT ("nserial", "colaboradorId") DO NOTHING;
 
 -- Licenças de usuários
@@ -295,9 +288,10 @@ INSERT INTO "licenca_usuarios" ("colaboradorId", "licencaId") VALUES
   ('111.111.111-11', (SELECT id FROM tipos_licenca WHERE nome = 'Exchange Online Plan 1')),
   ('222.222.222-22', (SELECT id FROM tipos_licenca WHERE nome = 'Microsoft 365 Business Standard')),
   ('222.222.222-22', (SELECT id FROM tipos_licenca WHERE nome = 'Power BI Pro')),
-  ('333.333.333-33', (SELECT id FROM tipos_licenca WHERE nome = 'Microsoft 365 Business Standard'));
+  ('333.333.333-33', (SELECT id FROM tipos_licenca WHERE nome = 'Microsoft 365 Business Standard'))
+ON CONFLICT DO NOTHING;
 
--- Categorias de Perfil de Hardware
+-- Categorias de perfil
 INSERT INTO "categorias_perfil" ("nome", "processamento", "ram", "memoriaDisco", "mobilidade", "licencaOffice", "fabric", "project", "powerBi") VALUES
   ('BÁSICO 01', 'Intel Core i3 / Ryzen 3', '8GB', '256GB SSD', false, 'Microsoft 365 Apps', false, false, false),
   ('BÁSICO 02', 'Intel Core i5 / Ryzen 5', '8GB', '256GB SSD', true, 'Microsoft 365 Business Standard', false, false, false),
@@ -311,14 +305,13 @@ INSERT INTO "ocorrencias" ("nserial", "tipo", "descricao", "dataOcorr", "resolvi
   ('NB-DELL-001', 'Manutenção', 'Troca de bateria realizada. Bateria apresentava degradação acima de 80%.', '2024-08-10', '2024-08-12')
 ON CONFLICT DO NOTHING;
 
--- Usuário administrador (senha: Admin@Cassol2024 — bcrypt hash)
+-- Usuários do sistema
 INSERT INTO "usuarios_sistema" ("email", "nome", "senha", "perfil", "empresasIds") VALUES
-  ('admin@cassol.com.br', 'Administrador do Sistema',
-   '$2b$12$.ohNeINL1kxOGJkgTfJxu.U0UzHO2VuSdEJeBcKPDFp8r9A2ezuDG', -- Admin@Cassol2024
-   'Administrador', ARRAY[1,2,3,4,5,6]),
-  ('gestor.ti@cassol.com.br', 'Carlos Eduardo Santos',
-   '$2b$12$.ohNeINL1kxOGJkgTfJxu.U0UzHO2VuSdEJeBcKPDFp8r9A2ezuDG', -- Admin@Cassol2024
-   'GestorTI', ARRAY[1,2,3])
+  ('admin@cassol.com.br', 'Administrador do Sistema', '$2b$12$TmX57gRc8scQLh0PQVgagOOUGsIo0r9lkmqvUtRYEwSok9cyZE4oe', 'Administrador', '{1,2,3,4,5,6}'),
+  ('gestor.ti@cassol.com.br', 'Carlos Eduardo Santos', '$2b$12$ISBCRr2Z2clRX6IHqwpKSeaasj/u9z1rNEVhYN8S/hjkDDiU18b1G', 'GestorTI', '{1,2,3}')
 ON CONFLICT ("email") DO NOTHING;
 
-SELECT 'Seed concluído!' AS resultado;
+-- Sequências (garantir que os IDs comecem corretos após insert manual)
+SELECT setval('empresas_id_seq', (SELECT MAX(id) FROM empresas));
+SELECT setval('unidades_id_seq', (SELECT MAX(id) FROM unidades));
+
