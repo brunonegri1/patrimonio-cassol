@@ -13,7 +13,7 @@
     "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force && npx tsx prisma/seed.ts",
-    "postinstall": "PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 prisma generate || echo \"Skipping prisma generate\""
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
