@@ -1,7 +1,13 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000', '*.vercel.app'],
+    },
+  },
+  // Permite imports de servidor sem expor no cliente
+  serverExternalPackages: ['bcryptjs', '@prisma/client'],
+}
 
-export default nextConfig;
+export default nextConfig
