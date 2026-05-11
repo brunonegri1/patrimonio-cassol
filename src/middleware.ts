@@ -3,15 +3,23 @@ import { getToken } from 'next-auth/jwt'
 
 export async function middleware(req: NextRequest) {
   const { nextUrl } = req
+  const path = nextUrl.pathname
 
-  const isAuthRoute = nextUrl.pathname.startsWith('/login')
-  const isApiRoute = nextUrl.pathname.startsWith('/api')
-  const isCronRoute = nextUrl.pathname.startsWith('/api/cron')
-  const isStaticRoute = nextUrl.pathname.startsWith('/_next') || nextUrl.pathname.includes('.')
+  // Libera estáticos e rotas do NextAuth (signin, callback, session, csrf, etc.)
+  if (
+    path.startsWith('/_next') ||
+    path.startsWith('/api/auth') ||
+    path.includes('.') ||
+    path === '/favicon.ico'
+  ) {
+    return NextResponse.next()
+  }
 
-  if (isStaticRoute) return NextResponse.next()
+  const isAuthRoute = path.startsWith('/login')
+  const isApiRoute  = path.startsWith('/api')
+  const isCronRoute = path.startsWith('/api/cron')
 
-  // Protege cron routes com CRON_SECRET
+  // Cron routes protegidas por CRON_SECRET
   if (isCronRoute) {
     const authHeader = req.headers.get('authorization')
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -20,14 +28,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Verifica sessão JWT (sem usar Prisma no Edge)
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  })
+  // Verifica sessão JWT (Edge-safe, sem Prisma)
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
   const isLoggedIn = !!token
 
-  // API routes
+  // API routes (exceto /api/auth já liberadas acima)
   if (isApiRoute) {
     if (!isLoggedIn) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -35,7 +40,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Redireciona usuário logado para o dashboard
+  // Login: redireciona se já autenticado
   if (isAuthRoute) {
     if (isLoggedIn) {
       return NextResponse.redirect(new URL('/dashboard', nextUrl))
@@ -43,7 +48,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Protege todas as rotas do dashboard
+  // Protege dashboard e demais rotas
   if (!isLoggedIn) {
     return NextResponse.redirect(new URL('/login', nextUrl))
   }
