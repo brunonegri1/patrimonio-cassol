@@ -1,24 +1,33 @@
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export default auth((req) => {
-  const { nextUrl, auth: session } = req
-  const isLoggedIn = !!session
+export async function middleware(req: NextRequest) {
+  const { nextUrl } = req
 
   const isAuthRoute = nextUrl.pathname.startsWith('/login')
   const isApiRoute = nextUrl.pathname.startsWith('/api')
   const isCronRoute = nextUrl.pathname.startsWith('/api/cron')
+  const isStaticRoute = nextUrl.pathname.startsWith('/_next') || nextUrl.pathname.includes('.')
+
+  if (isStaticRoute) return NextResponse.next()
 
   // Protege cron routes com CRON_SECRET
   if (isCronRoute) {
-    const auth = req.headers.get('authorization')
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+    const authHeader = req.headers.get('authorization')
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     return NextResponse.next()
   }
 
-  // API routes não precisam de redirect
+  // Verifica sessão JWT (sem usar Prisma no Edge)
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  })
+  const isLoggedIn = !!token
+
+  // API routes
   if (isApiRoute) {
     if (!isLoggedIn) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,8 +49,8 @@ export default auth((req) => {
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
-  matcher: ['/((?!_next|favicon.ico|.*\\..*).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -11,7 +10,6 @@ const loginSchema = z.object({
 })
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma) as any,
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',
@@ -33,13 +31,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const senhaValida = await bcrypt.compare(password, user.senha)
         if (!senhaValida) return null
 
-        // Atualiza último acesso
         await prisma.usuarioSistema.update({
           where: { id: user.id },
           data: { ultimoAcesso: new Date() },
         })
 
-        // Audit log de login
         await prisma.auditLog.create({
           data: {
             tabela: 'UsuarioSistema',
@@ -80,7 +76,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 })
 
-// Extend next-auth types
 declare module 'next-auth' {
   interface User {
     perfil?: string
