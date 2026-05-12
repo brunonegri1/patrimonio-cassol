@@ -16,7 +16,6 @@ model Empresa {
   unidades Unidade[]
   @@map("empresas")
 }
-
 model Unidade {
   id            Int           @id @default(autoincrement())
   nome          String
@@ -27,7 +26,6 @@ model Unidade {
   equipamentos  Equipamento[]
   @@map("unidades")
 }
-
 model TipoEquipamento {
   id           Int           @id @default(autoincrement())
   nome         String        @unique
@@ -35,21 +33,18 @@ model TipoEquipamento {
   equipamentos Equipamento[]
   @@map("tipos_equipamento")
 }
-
 model Marca {
   id           Int           @id @default(autoincrement())
   nome         String        @unique
   equipamentos Equipamento[]
   @@map("marcas")
 }
-
 model TipoPosse {
   id           Int           @id @default(autoincrement())
   categoria    String        @unique
   equipamentos Equipamento[]
   @@map("tipos_posse")
 }
-
 model Contrato {
   id           Int           @id @default(autoincrement())
   numero       String        @unique
@@ -61,7 +56,6 @@ model Contrato {
   equipamentos Equipamento[]
   @@map("contratos")
 }
-
 model Colaborador {
   id               String               @id
   matricula        String?
@@ -82,7 +76,6 @@ model Colaborador {
   termos           TermoEquipamento[]
   @@map("colaboradores")
 }
-
 model Equipamento {
   nserial         String               @id
   dataAtualizacao DateTime?
@@ -111,7 +104,6 @@ model Equipamento {
   termosDevolvido TermoEquipamento[]   @relation("TermoDevolvido")
   @@map("equipamentos")
 }
-
 model EquipamentoUsuario {
   nserial        String
   colaboradorId  String
@@ -126,7 +118,6 @@ model EquipamentoUsuario {
   @@id([nserial, colaboradorId])
   @@map("equipamento_usuarios")
 }
-
 model TipoLicenca {
   id        Int              @id @default(autoincrement())
   nome      String           @unique
@@ -136,7 +127,6 @@ model TipoLicenca {
   usuarios  LicencaUsuario[]
   @@map("tipos_licenca")
 }
-
 model LicencaUsuario {
   id            Int         @id @default(autoincrement())
   colaboradorId String
@@ -148,7 +138,6 @@ model LicencaUsuario {
   ativa         Boolean     @default(true)
   @@map("licenca_usuarios")
 }
-
 model CategoriaPerfil {
   id            Int     @id @default(autoincrement())
   nome          String  @unique
@@ -162,7 +151,6 @@ model CategoriaPerfil {
   powerBi       Boolean @default(false)
   @@map("categorias_perfil")
 }
-
 model TermoEquipamento {
   id                   Int          @id @default(autoincrement())
   unidadeId            Int
@@ -179,7 +167,6 @@ model TermoEquipamento {
   criadoEm             DateTime     @default(now())
   @@map("termos_equipamento")
 }
-
 model Ocorrencia {
   id          Int         @id @default(autoincrement())
   nserial     String
@@ -190,7 +177,6 @@ model Ocorrencia {
   resolvidoEm DateTime?
   @@map("ocorrencias")
 }
-
 model AuditLog {
   id            Int       @id @default(autoincrement())
   tabela        String
@@ -206,7 +192,6 @@ model AuditLog {
   timestamp     DateTime  @default(now())
   @@map("audit_logs")
 }
-
 model UsuarioSistema {
   id           Int          @id @default(autoincrement())
   email        String       @unique
@@ -219,7 +204,6 @@ model UsuarioSistema {
   criadoEm     DateTime     @default(now())
   @@map("usuarios_sistema")
 }
-
 enum TipoTrabalho     { CLT PJ PostoTrabalho Terceiro }
 enum SituacaoTrabalho { Trabalhando Afastado Desligado }
 enum StatusEquipamento { Ativo Estoque Desativado Baixado EmManutencao FurtadoRoubado }
