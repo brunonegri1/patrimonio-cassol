@@ -3,17 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
 model Empresa {
-  id       Int       @id @default(autoincrement())
+  id       Int      @id @default(autoincrement())
   nome     String
-  cnpj     String?   @unique
-  ativo    Boolean   @default(true)
+  cnpj     String?  @unique
+  ativo    Boolean  @default(true)
   unidades Unidade[]
-
   @@map("empresas")
 }
 
@@ -25,60 +25,7 @@ model Unidade {
   empresa       Empresa       @relation(fields: [empresaId], references: [id])
   colaboradores Colaborador[]
   equipamentos  Equipamento[]
-
   @@map("unidades")
-}
-
-model Colaborador {
-  id               String             @id
-  matricula        String?
-  nome             String
-  cargo            String?
-  setor            String?
-  unidadeId        Int
-  tipoTrabalho     TipoTrabalho
-  situacao         SituacaoTrabalho   @default(Trabalhando)
-  dataAdmissao     DateTime?
-  dataDesligamento DateTime?
-  userRede         String?
-  email            String?
-  ativo            Boolean            @default(true)
-  unidade          Unidade            @relation(fields: [unidadeId], references: [id])
-  equipamentos     EquipamentoUsuario[]
-  licencas         LicencaUsuario[]
-  termos           TermoEquipamento[]
-
-  @@map("colaboradores")
-}
-
-model Equipamento {
-  nserial         String               @id
-  dataAtualizacao DateTime?
-  status          StatusEquipamento    @default(Ativo)
-  patrimonio      String?
-  tipoEquipId     Int
-  posseId         Int
-  contratoId      Int?
-  marcaId         Int?
-  modelo          String?
-  processador     String?
-  geracao         String?
-  ram             String?
-  memoriaDisco    String?
-  unidadeId       Int
-  observacoes     String?
-  ativo           Boolean              @default(true)
-  tipoEquip       TipoEquipamento      @relation(fields: [tipoEquipId], references: [id])
-  posse           TipoPosse            @relation(fields: [posseId], references: [id])
-  marca           Marca?               @relation(fields: [marcaId], references: [id])
-  unidade         Unidade              @relation(fields: [unidadeId], references: [id])
-  contrato        Contrato?            @relation(fields: [contratoId], references: [id])
-  usuarios        EquipamentoUsuario[]
-  ocorrencias     Ocorrencia[]
-  termosNovos     TermoEquipamento[]   @relation("TermoNovo")
-  termosDevolvidos TermoEquipamento[]  @relation("TermoDev")
-
-  @@map("equipamentos")
 }
 
 model TipoEquipamento {
@@ -86,7 +33,6 @@ model TipoEquipamento {
   nome         String        @unique
   icone        String?
   equipamentos Equipamento[]
-
   @@map("tipos_equipamento")
 }
 
@@ -94,7 +40,6 @@ model Marca {
   id           Int           @id @default(autoincrement())
   nome         String        @unique
   equipamentos Equipamento[]
-
   @@map("marcas")
 }
 
@@ -102,7 +47,6 @@ model TipoPosse {
   id           Int           @id @default(autoincrement())
   categoria    String        @unique
   equipamentos Equipamento[]
-
   @@map("tipos_posse")
 }
 
@@ -112,25 +56,73 @@ model Contrato {
   fornecedor   String?
   dataContrato DateTime
   dataFinal    DateTime
-  valor        Decimal?      @db.Decimal(12, 2)
+  valor        Decimal?      @db.Decimal(12,2)
   observacoes  String?
   equipamentos Equipamento[]
-
   @@map("contratos")
+}
+
+model Colaborador {
+  id               String               @id
+  matricula        String?
+  nome             String
+  cargo            String?
+  setor            String?
+  unidadeId        Int
+  unidade          Unidade              @relation(fields: [unidadeId], references: [id])
+  tipoTrabalho     TipoTrabalho
+  situacao         SituacaoTrabalho     @default(Trabalhando)
+  dataAdmissao     DateTime?
+  dataDesligamento DateTime?
+  userRede         String?
+  email            String?
+  ativo            Boolean              @default(true)
+  equipamentos     EquipamentoUsuario[]
+  licencas         LicencaUsuario[]
+  termos           TermoEquipamento[]
+  @@map("colaboradores")
+}
+
+model Equipamento {
+  nserial         String               @id
+  dataAtualizacao DateTime?
+  status          StatusEquipamento    @default(Ativo)
+  patrimonio      String?
+  tipoEquipId     Int
+  tipoEquip       TipoEquipamento      @relation(fields: [tipoEquipId], references: [id])
+  posseId         Int
+  posse           TipoPosse            @relation(fields: [posseId], references: [id])
+  contratoId      Int?
+  contrato        Contrato?            @relation(fields: [contratoId], references: [id])
+  marcaId         Int?
+  marca           Marca?               @relation(fields: [marcaId], references: [id])
+  modelo          String?
+  processador     String?
+  geracao         String?
+  ram             String?
+  memoriaDisco    String?
+  unidadeId       Int
+  unidade         Unidade              @relation(fields: [unidadeId], references: [id])
+  observacoes     String?
+  ativo           Boolean              @default(true)
+  usuarios        EquipamentoUsuario[]
+  ocorrencias     Ocorrencia[]
+  termosNovo      TermoEquipamento[]   @relation("TermoNovo")
+  termosDevolvido TermoEquipamento[]   @relation("TermoDevolvido")
+  @@map("equipamentos")
 }
 
 model EquipamentoUsuario {
   nserial        String
   colaboradorId  String
+  equipamento    Equipamento @relation(fields: [nserial], references: [nserial])
+  colaborador    Colaborador @relation(fields: [colaboradorId], references: [id])
   unidadeId      Int
   cargo          String?
   setor          String?
   dataVinculo    DateTime    @default(now())
   dataDesvinculo DateTime?
   principal      Boolean     @default(true)
-  equipamento    Equipamento @relation(fields: [nserial], references: [nserial])
-  colaborador    Colaborador @relation(fields: [colaboradorId], references: [id])
-
   @@id([nserial, colaboradorId])
   @@map("equipamento_usuarios")
 }
@@ -140,22 +132,20 @@ model TipoLicenca {
   nome      String           @unique
   tipo      String
   descricao String?
-  custo     Decimal?         @db.Decimal(10, 2)
-  licencas  LicencaUsuario[]
-
+  custo     Decimal?         @db.Decimal(10,2)
+  usuarios  LicencaUsuario[]
   @@map("tipos_licenca")
 }
 
 model LicencaUsuario {
   id            Int         @id @default(autoincrement())
   colaboradorId String
+  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
   licencaId     Int
+  licenca       TipoLicenca @relation(fields: [licencaId], references: [id])
   dataInicio    DateTime    @default(now())
   dataFim       DateTime?
   ativa         Boolean     @default(true)
-  colaborador   Colaborador @relation(fields: [colaboradorId], references: [id])
-  licenca       TipoLicenca @relation(fields: [licencaId], references: [id])
-
   @@map("licenca_usuarios")
 }
 
@@ -170,37 +160,34 @@ model CategoriaPerfil {
   fabric        Boolean @default(false)
   project       Boolean @default(false)
   powerBi       Boolean @default(false)
-
   @@map("categorias_perfil")
 }
 
 model TermoEquipamento {
-  id                Int         @id @default(autoincrement())
-  unidadeId         Int
-  colaboradorId     String
-  nserialNovo       String?
-  nserialDevolvido  String?
-  termoDigitalizado Boolean     @default(false)
-  arquivoUrl        String?
-  dataAssinatura    DateTime
-  nomeCompleto      String
-  criadoEm          DateTime    @default(now())
-  colaborador       Colaborador @relation(fields: [colaboradorId], references: [id])
-  equipamentoNovo   Equipamento? @relation("TermoNovo", fields: [nserialNovo], references: [nserial])
-  equipamentoDev    Equipamento? @relation("TermoDev", fields: [nserialDevolvido], references: [nserial])
-
+  id                   Int          @id @default(autoincrement())
+  unidadeId            Int
+  colaboradorId        String
+  colaborador          Colaborador  @relation(fields: [colaboradorId], references: [id])
+  nserialNovo          String?
+  equipamentoNovo      Equipamento? @relation("TermoNovo", fields: [nserialNovo], references: [nserial])
+  nserialDevolvido     String?
+  equipamentoDevolvido Equipamento? @relation("TermoDevolvido", fields: [nserialDevolvido], references: [nserial])
+  termoDigitalizado    Boolean      @default(false)
+  arquivoUrl           String?
+  dataAssinatura       DateTime
+  nomeCompleto         String
+  criadoEm             DateTime     @default(now())
   @@map("termos_equipamento")
 }
 
 model Ocorrencia {
   id          Int         @id @default(autoincrement())
   nserial     String
+  equipamento Equipamento @relation(fields: [nserial], references: [nserial])
   tipo        String?
   descricao   String
   dataOcorr   DateTime    @default(now())
   resolvidoEm DateTime?
-  equipamento Equipamento @relation(fields: [nserial], references: [nserial])
-
   @@map("ocorrencias")
 }
 
@@ -217,10 +204,6 @@ model AuditLog {
   ip            String?
   userAgent     String?
   timestamp     DateTime  @default(now())
-
-  @@index([tabela, registroId])
-  @@index([usuarioId])
-  @@index([timestamp])
   @@map("audit_logs")
 }
 
@@ -230,48 +213,15 @@ model UsuarioSistema {
   nome         String
   senha        String
   perfil       PerfilAcesso
-  empresasIds  Int[]
+  empresasIds  Int[]        @default([])
   ativo        Boolean      @default(true)
   ultimoAcesso DateTime?
   criadoEm     DateTime     @default(now())
-
   @@map("usuarios_sistema")
 }
 
-enum TipoTrabalho {
-  CLT
-  PJ
-  PostoTrabalho
-  Terceiro
-}
-
-enum SituacaoTrabalho {
-  Trabalhando
-  Afastado
-  Desligado
-}
-
-enum StatusEquipamento {
-  Ativo
-  Estoque
-  Desativado
-  Baixado
-  EmManutencao
-  FurtadoRoubado
-}
-
-enum PerfilAcesso {
-  Administrador
-  GestorTI
-  Tecnico
-  Consultor
-}
-
-enum AcaoAudit {
-  CREATE
-  UPDATE
-  DELETE
-  LOGIN
-  LOGOUT
-  SYNC
-}
+enum TipoTrabalho     { CLT PJ PostoTrabalho Terceiro }
+enum SituacaoTrabalho { Trabalhando Afastado Desligado }
+enum StatusEquipamento { Ativo Estoque Desativado Baixado EmManutencao FurtadoRoubado }
+enum PerfilAcesso     { Administrador GestorTI Tecnico Consultor }
+enum AcaoAudit        { CREATE UPDATE DELETE LOGIN LOGOUT SYNC }
