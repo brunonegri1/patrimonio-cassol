@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
@@ -11,9 +10,8 @@ const loginSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'jwt' },
-  pages: {
-    signIn: '/login',
-  },
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  pages: { signIn: '/login' },
   providers: [
     Credentials({
       async authorize(credentials) {
@@ -22,36 +20,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data
 
-        const user = await prisma.usuarioSistema.findUnique({
-          where: { email, ativo: true },
-        })
+        try {
+          // Usar postgres.js diretamente — sem Prisma, sem binários
+          const postgres = (await import('postgres')).default
+          const sql = postgres(process.env.DATABASE_URL!, { ssl: 'require', max: 1 })
 
-        if (!user) return null
+          const rows = await sql`
+            SELECT id, email, nome, senha, perfil, "empresasIds", ativo
+            FROM usuarios_sistema
+            WHERE email = ${email} AND ativo = true
+            LIMIT 1
+          `
 
-        const senhaValida = await bcrypt.compare(password, user.senha)
-        if (!senhaValida) return null
+          await sql.end()
 
-        await prisma.usuarioSistema.update({
-          where: { id: user.id },
-          data: { ultimoAcesso: new Date() },
-        })
+          if (rows.length === 0) return null
 
-        await prisma.auditLog.create({
-          data: {
-            tabela: 'UsuarioSistema',
-            registroId: String(user.id),
-            acao: 'LOGIN',
-            usuarioId: user.id,
-            usuarioNome: user.nome,
-          },
-        })
+          const user = rows[0]
+          const senhaValida = await bcrypt.compare(password, user.senha)
+          if (!senhaValida) return null
 
-        return {
-          id: String(user.id),
-          email: user.email,
-          name: user.nome,
-          perfil: user.perfil,
-          empresasIds: user.empresasIds,
+          return {
+            id: String(user.id),
+            email: user.email,
+            name: user.nome,
+            perfil: user.perfil,
+            empresasIds: user.empresasIds,
+          }
+        } catch (err: any) {
+          console.error('[auth] Erro ao conectar DB:', err.message)
+          return null
         }
       },
     }),

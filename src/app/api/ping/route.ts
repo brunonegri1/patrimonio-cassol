@@ -7,12 +7,12 @@ export async function GET() {
   const urlSafe = dbUrl.replace(/:([^:@]+)@/, ':***@')
   
   try {
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient()
-    const result = await prisma.$queryRaw`SELECT current_user, current_database()`
-    await prisma.$disconnect()
-    return NextResponse.json({ ok: true, db: urlSafe, result })
+    const postgres = (await import('postgres')).default
+    const sql = postgres(dbUrl, { ssl: 'require', max: 1 })
+    const rows = await sql`SELECT current_user, current_database(), count(*) FROM usuarios_sistema`
+    await sql.end()
+    return NextResponse.json({ ok: true, db: urlSafe, rows })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, db: urlSafe, error: e.message?.substring(0, 300) }, { status: 500 })
+    return NextResponse.json({ ok: false, db: urlSafe, error: e.message?.substring(0, 500) }, { status: 500 })
   }
 }
