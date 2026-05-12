@@ -1,7 +1,6 @@
 {
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "buildCommand": "DATABASE_URL=$POSTGRES_PRISMA_URL DIRECT_URL=$POSTGRES_URL_NON_POOLING prisma generate && next build",
+  "buildCommand": "DATABASE_URL='postgresql://user:pass@localhost:5432/db' DIRECT_URL='postgresql://user:pass@localhost:5432/db' npx prisma generate && next build",
   "crons": [
     {
       "path": "/api/cron/sync-senior",
